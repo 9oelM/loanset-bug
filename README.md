@@ -51,6 +51,8 @@ When attempting to sign a LoanSet transaction locally with `wallet.sign()` for t
 2. ✅ Transaction encodes and validates locally
 3. ❌ **Submission fails with "Invalid signature" error**
 
+![invalid-signature-bug.png](./invalid-signature-bug.png)
+
 ### CounterpartySignature Field Structure
 
 According to XRPL specification, `CounterpartySignature` is an inner object that can contain:
