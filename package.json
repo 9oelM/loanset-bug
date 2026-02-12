@@ -5,7 +5,7 @@
     "ripple-binary-codec": "^2.6.0",
     "ripple-keypairs": "^2.0.0",
     "typescript": "^5.9.3",
-    "xrpl": "^4.5.0"
+    "xrpl": "^4.6.0-smartescrow.0"
   },
   "type": "module",
   "devDependencies": {
