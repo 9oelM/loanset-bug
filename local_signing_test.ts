@@ -1,55 +1,10 @@
-import xrpl from 'xrpl'
+import xrpl, { signLoanSetByCounterparty } from 'xrpl'
 import fs from 'fs'
 import { sign } from 'ripple-keypairs'
-import { encode, encodeForSigning, decode } from 'ripple-binary-codec'
 
 // ============================================================================
 // Helper functions (from xrpl.js counterpartySigner.ts)
 // ============================================================================
-
-function getDecodedTransaction(txOrBlob: any): any {
-  if (typeof txOrBlob === 'object') {
-    return decode(encode(txOrBlob))
-  }
-  return decode(txOrBlob)
-}
-
-function computeSignature(tx: any, privateKey: string): string {
-  return sign(encodeForSigning(tx), privateKey)
-}
-
-function signLoanSetByCounterparty(
-  wallet: xrpl.Wallet,
-  transaction: any,
-): {
-  tx: any
-  tx_blob: string
-  hash: string
-} {
-  const tx = getDecodedTransaction(transaction)
-
-  if (tx.TransactionType !== 'LoanSet') {
-    throw new Error('Transaction must be a LoanSet transaction.')
-  }
-  if (tx.CounterpartySignature) {
-    throw new Error('Transaction is already signed by the counterparty.')
-  }
-  if (tx.TxnSignature == null || tx.SigningPubKey == null) {
-    throw new Error('Transaction must be first signed by first party.')
-  }
-
-  tx.CounterpartySignature = {
-    SigningPubKey: wallet.publicKey,
-    TxnSignature: computeSignature(tx, wallet.privateKey),
-  }
-
-  const serialized = encode(tx)
-  return {
-    tx,
-    tx_blob: serialized,
-    hash: xrpl.hashes.hashSignedTx(serialized),
-  }
-}
 
 // ============================================================================
 // Main: LoanSet with Single Signing (Following Integration Test Flow)
