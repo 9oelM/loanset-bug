@@ -72,7 +72,7 @@ const [ticketCreateResponse, mptIssuanceResponse] = await Promise.all([
       xrpl.MPTokenIssuanceCreateFlags.tfMPTCanClawback |
       xrpl.MPTokenIssuanceCreateFlags.tfMPTCanTrade,
     MPTokenMetadata: xrpl.encodeMPTokenMetadata(mptData)
-  }, { wallet: depositor, autofill: true }),
+  } as any, { wallet: depositor, autofill: true }),
   client.submitAndWait({
     TransactionType: 'Batch',
     Account: credentialIssuer.address,
@@ -121,16 +121,18 @@ const [ticketCreateResponse, mptIssuanceResponse] = await Promise.all([
         }
       }
     ]
-  }, { wallet: credentialIssuer, autofill: true })
+  } as any, { wallet: credentialIssuer, autofill: true })
 ])
+
+if (typeof ticketCreateResponse.result.meta === `string`) process.exit(1);
 
 // Extract ticket sequence numbers
 const tickets = ticketCreateResponse.result.meta.AffectedNodes
-  .filter(node => node.CreatedNode?.LedgerEntryType === 'Ticket')
-  .map(node => node.CreatedNode.NewFields.TicketSequence)
+  .filter((node: any) => node.CreatedNode?.LedgerEntryType === 'Ticket')
+  .map((node: any) => node.CreatedNode.NewFields.TicketSequence)
 
 // Extract MPT issuance ID
-const mptID = mptIssuanceResponse.result.meta.mpt_issuance_id
+const mptID = (mptIssuanceResponse.result.meta as any).mpt_issuance_id
 
 // Get domain ID
 const credentialIssuerObjects = await client.request({
@@ -138,9 +140,9 @@ const credentialIssuerObjects = await client.request({
   account: credentialIssuer.address,
   ledger_index: 'validated'
 })
-const domainID = credentialIssuerObjects.result.account_objects.find(node =>
+const domainID = credentialIssuerObjects.result.account_objects.find((node: any) =>
   node.LedgerEntryType === 'PermissionedDomain'
-).index
+)!.index
 
 process.stdout.write('Setting up tutorial: 2/6\r')
 
@@ -170,7 +172,7 @@ await Promise.all([
           }
         }
       ]
-    }, { wallet, autofill: true })
+    } as any, { wallet, autofill: true })
   )),
   // Depositor only needs to accept credentials
   client.submitAndWait({
@@ -178,7 +180,7 @@ await Promise.all([
     Account: depositor.address,
     Issuer: credentialIssuer.address,
     CredentialType: credentialType
-  }, { wallet: depositor, autofill: true })
+  } as any, { wallet: depositor, autofill: true })
 ])
 
 process.stdout.write('Setting up tutorial: 3/6\r')
@@ -193,7 +195,7 @@ const [vaultCreateResponse] = await Promise.all([
     },
     Flags: xrpl.VaultCreateFlags.tfVaultPrivate,
     DomainID: domainID
-  }, { wallet: loanBroker, autofill: true }),
+  } as any, { wallet: loanBroker, autofill: true }),
   client.submitAndWait({
     TransactionType: 'Batch',
     Account: depositor.address,
@@ -224,12 +226,14 @@ const [vaultCreateResponse] = await Promise.all([
         }
       }
     ]
-  }, { wallet: depositor, autofill: true })
+  } as any, { wallet: depositor, autofill: true })
 ])
 
-const vaultID = vaultCreateResponse.result.meta.AffectedNodes.find(node =>
+if (typeof vaultCreateResponse.result.meta === `string`) process.exit(1);
+
+const vaultID = (vaultCreateResponse.result.meta.AffectedNodes.find((node: any) =>
   node.CreatedNode?.LedgerEntryType === 'Vault'
-).CreatedNode.LedgerIndex
+)! as any).CreatedNode.LedgerIndex
 
 process.stdout.write('Setting up tutorial: 4/6\r')
 
@@ -239,7 +243,7 @@ const [loanBrokerSetResponse] = await Promise.all([
     TransactionType: 'LoanBrokerSet',
     Account: loanBroker.address,
     VaultID: vaultID
-  }, { wallet: loanBroker, autofill: true }),
+  } as any, { wallet: loanBroker, autofill: true }),
   client.submitAndWait({
     TransactionType: 'VaultDeposit',
     Account: depositor.address,
@@ -248,12 +252,14 @@ const [loanBrokerSetResponse] = await Promise.all([
       mpt_issuance_id: mptID,
       value: '50000000'
     }
-  }, { wallet: depositor, autofill: true })
+  } as any, { wallet: depositor, autofill: true })
 ])
 
-const loanBrokerID = loanBrokerSetResponse.result.meta.AffectedNodes.find(node =>
+if (typeof loanBrokerSetResponse.result.meta === `string`) process.exit(1);
+
+const loanBrokerID = (loanBrokerSetResponse.result.meta.AffectedNodes.find((node: any) =>
   node.CreatedNode?.LedgerEntryType === 'LoanBroker'
-).CreatedNode.LedgerIndex
+)! as any).CreatedNode.LedgerIndex
 
 process.stdout.write('Setting up tutorial: 5/6\r')
 
@@ -263,7 +269,7 @@ process.stdout.write('Setting up tutorial: 5/6\r')
 console.warn = () => {}
 
 // Helper function to create and sign a LoanSet transaction
-async function createSignedLoanSetTx (ticketSequence) {
+async function createSignedLoanSetTx(ticketSequence: number): Promise<any> {
   const loanSetTx = await client.autofill({
     TransactionType: 'LoanSet',
     Account: loanBroker.address,
@@ -277,20 +283,20 @@ async function createSignedLoanSetTx (ticketSequence) {
     LoanServiceFee: 10,
     Sequence: 0,
     TicketSequence: ticketSequence
-  })
+  } as any)
 
   const loanBrokerSignature = await client.request({
     command: 'sign',
     tx_json: loanSetTx,
     secret: loanBroker.seed
-  })
+  } as any) as any
 
   const borrowerSignature = await client.request({
     command: 'sign',
     tx_json: loanBrokerSignature.result.tx_json,
     secret: borrower.seed,
     signature_target: 'CounterpartySignature'
-  })
+  } as any) as any
 
   return borrowerSignature.result.tx_json
 }
@@ -305,11 +311,11 @@ const [submitLoan1, submitLoan2] = await Promise.all([
   client.submit(signedLoan1),
   client.submit(signedLoan2)
 ])
-const hash1 = submitLoan1.result.tx_json.hash
-const hash2 = submitLoan2.result.tx_json.hash
+const hash1 = submitLoan1.result.tx_json.hash!
+const hash2 = submitLoan2.result.tx_json.hash!
 
 // Helper function to check tx hash is validated
-async function validateTx (hash, maxRetries = 20) {
+async function validateTx(hash: string, maxRetries = 20): Promise<any> {
   for (let i = 0; i < maxRetries; i++) {
     await new Promise(resolve => setTimeout(resolve, 1000))
     try {
@@ -331,13 +337,13 @@ const [submitResponse1, submitResponse2] = await Promise.all([
   validateTx(hash2)
 ])
 
-const loanID1 = submitResponse1.result.meta.AffectedNodes.find(node =>
+const loanID1 = submitResponse1.result.meta.AffectedNodes.find((node: any) =>
   node.CreatedNode?.LedgerEntryType === 'Loan'
-).CreatedNode.LedgerIndex
+)!.CreatedNode.LedgerIndex
 
-const loanID2 = submitResponse2.result.meta.AffectedNodes.find(node =>
+const loanID2 = submitResponse2.result.meta.AffectedNodes.find((node: any) =>
   node.CreatedNode?.LedgerEntryType === 'Loan'
-).CreatedNode.LedgerIndex
+)!.CreatedNode.LedgerIndex
 
 process.stdout.write('Setting up tutorial: 6/6\r')
 

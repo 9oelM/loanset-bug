@@ -4,7 +4,12 @@
   "dependencies": {
     "ripple-binary-codec": "^2.6.0",
     "ripple-keypairs": "^2.0.0",
+    "typescript": "^5.9.3",
     "xrpl": "^4.5.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0"
+  }
 }

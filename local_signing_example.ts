@@ -1,13 +1,41 @@
 import xrpl from 'xrpl'
 import fs from 'fs'
+import { sign } from 'ripple-keypairs'
+import { encodeForSigning } from 'ripple-binary-codec'
 
 // Example: Local signing of LoanSet transactions with wallet.sign
 // Demonstrates multi-party signing where both parties sign locally
 
 console.log('=== Local LoanSet Signing Example ===\n')
 
+// Define setup data type
+interface SetupData {
+  loanBroker: {
+    address: string
+    seed: string
+  }
+  borrower: {
+    address: string
+    seed: string
+  }
+  depositor: {
+    address: string
+    seed: string
+  }
+  credentialIssuer: {
+    address: string
+    seed: string
+  }
+  domainID: string
+  mptID: string
+  vaultID: string
+  loanBrokerID: string
+  loanID1: string
+  loanID2: string
+}
+
 // Load setup data
-const setupData = JSON.parse(fs.readFileSync('lendingSetup.json', 'utf8'))
+const setupData: SetupData = JSON.parse(fs.readFileSync('lendingSetup.json', 'utf8'))
 
 const client = new xrpl.Client('wss://s.devnet.rippletest.net:51233')
 await client.connect()
@@ -40,7 +68,7 @@ const unsignedTx = await client.autofill({
   GracePeriod: 604800,
   LoanOriginationFee: '150',
   LoanServiceFee: '15'
-})
+} as any)
 
 console.log('Unsigned transaction created:')
 console.log(JSON.stringify(unsignedTx, null, 2))
@@ -51,10 +79,10 @@ console.log()
 // ============================================================================
 console.log('STEP 2: Signing with loan broker wallet.sign()...\n')
 
-const loanBrokerSigned = loanBroker.sign(unsignedTx)
+const loanBrokerSigned = loanBroker.sign(unsignedTx as any)
 
 // Decode the blob to get the full signed transaction with signatures
-const loanBrokerSignedTx = xrpl.decode(loanBrokerSigned.tx_blob)
+const loanBrokerSignedTx = xrpl.decode(loanBrokerSigned.tx_blob) as any
 
 console.log('Loan broker signature:')
 console.log('  Hash:', loanBrokerSigned.hash)
@@ -67,13 +95,8 @@ console.log()
 // ============================================================================
 console.log('STEP 3: Signing with borrower wallet.sign() as Counterparty...\n')
 
-// For CounterpartySignature, sign the transaction WITHOUT the main signature
-// Import low-level signing functions
-import { sign } from 'ripple-keypairs'
-import { encodeForSigning } from 'ripple-binary-codec'
-
 // Prepare the transaction for signing (REMOVE the loan broker's signature)
-const txForCounterpartySigning = { ...loanBrokerSignedTx }
+const txForCounterpartySigning: any = { ...loanBrokerSignedTx }
 delete txForCounterpartySigning.TxnSignature
 delete txForCounterpartySigning.SigningPubKey
 
@@ -112,12 +135,12 @@ console.log('  Has CounterpartySignature:', !!finalTx.CounterpartySignature)
 console.log()
 
 // Validate the transaction structure
-xrpl.validate(finalTx)
+xrpl.validate(finalTx as any)
 console.log('✓ Transaction validation passed')
 console.log()
 
 // Encode for submission
-const finalTxBlob = xrpl.encode(finalTx)
+const finalTxBlob = xrpl.encode(finalTx as any)
 console.log('Encoded transaction blob length:', finalTxBlob.length)
 console.log()
 
@@ -129,13 +152,17 @@ console.log('STEP 5: Submitting transaction...\n')
 const submitResponse = await client.submit(finalTxBlob)
 
 console.log('Submit result:', submitResponse.result.engine_result)
-console.log('Transaction hash:', submitResponse.result.tx_json.hash)
+const txHash = submitResponse.result.tx_json.hash
+if (!txHash) {
+  throw new Error('Transaction hash not found in submit response')
+}
+console.log('Transaction hash:', txHash)
 console.log()
 
 // Wait for validation
 console.log('Waiting for validation...')
 
-async function waitForValidation(hash, maxRetries = 20) {
+async function waitForValidation(hash: string, maxRetries = 20): Promise<any> {
   for (let i = 0; i < maxRetries; i++) {
     await new Promise(resolve => setTimeout(resolve, 1000))
     try {
@@ -150,7 +177,7 @@ async function waitForValidation(hash, maxRetries = 20) {
   throw new Error(`Transaction ${hash} not validated after ${maxRetries} attempts`)
 }
 
-const validatedTx = await waitForValidation(submitResponse.result.tx_json.hash)
+const validatedTx = await waitForValidation(txHash)
 
 if (validatedTx.result.meta.TransactionResult !== 'tesSUCCESS') {
   console.error('Error: Transaction failed:', validatedTx.result.meta.TransactionResult)
@@ -161,7 +188,7 @@ if (validatedTx.result.meta.TransactionResult !== 'tesSUCCESS') {
 console.log('✓ Transaction validated successfully!')
 console.log('Result:', validatedTx.result.meta.TransactionResult)
 
-const loanID = validatedTx.result.meta.AffectedNodes.find(node =>
+const loanID = validatedTx.result.meta.AffectedNodes.find((node: any) =>
   node.CreatedNode?.LedgerEntryType === 'Loan'
 ).CreatedNode.LedgerIndex
 
