@@ -14,7 +14,7 @@ This project contains TypeScript examples for working with XRPL lending transact
   - Generates two sample loans using **server-side signing** (working solution)
   - Outputs configuration to `lendingSetup.json`
 
-- **`local_signing_test.ts`** ✅ **CORRECT IMPLEMENTATION**
+- **`local_signing_test.ts`**
   - Follows the exact flow from xrpl.js integration tests
   - Uses the official `signLoanSetByCounterparty` implementation
   - Demonstrates proper transaction normalization and signing
@@ -42,9 +42,7 @@ npx tsx local_signing_test.ts
 
 ## CounterpartySignature Implementation
 
-### Correct Implementation ✅
-
-From `local_signing_test.ts`, following the official xrpl.js approach:
+From `local_signing_test.ts`, following the official xrpl.js integration test approach:
 
 ```typescript
 // Step 1: Autofill and sign with loan broker
